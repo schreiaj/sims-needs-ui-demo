@@ -15,7 +15,6 @@ templ ControlPage(roomID string, data SimData) {
 		>
 			<div class="needs-grid" 
 				data-on-interval__duration.500ms="$bladder=Math.min(100, Math.max(0, $bladder+$bladderRate)); $fun=Math.min(100, Math.max(0, $fun+$funRate)); $hunger=Math.min(100, Math.max(0, $hunger+$hungerRate)); $social=Math.min(100, Math.max(0, $social+$socialRate)); $energy=Math.min(100, Math.max(0, $energy+$energyRate)); $hygeine=Math.min(100, Math.max(0, $hygeine+$hygeineRate))"
-
 			>
 				for _, need := range []struct{name, icon string; value int}{
 					{"bladder", "fa-toilet", data.Bladder},
