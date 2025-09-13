@@ -11,11 +11,10 @@ templ ControlPage(roomID string, data SimData) {
 	<link href="/styles.css" rel="stylesheet"/>
 	<body>
 		<div class="control-panel" data-signals={ fmt.Sprintf("{bladder: %d, fun: %d, hunger: %d, social: %d, energy: %d, hygeine: %d, bladderRate:0, funRate:0, hungerRate:0, socialRate:0, energyRate:0, hygeineRate:0 }", data.Bladder, data.Fun, data.Hunger, data.Social, data.Energy, data.Hygeine) } 
-		data-effect={ fmt.Sprintf("console.log($bladder, $fun, $hunger, $social, $energy, $hygeine); @post('/%s/control')", roomID) }
+		data-effect__throttle.500ms={ fmt.Sprintf("console.log($bladder, $fun, $hunger, $social, $energy, $hygeine, $bladderRate, $funRate, $hungerRate, $socialRate, $energyRate, $hygeineRate); @post('/%s/control')", roomID) }
 		>
 			<div class="needs-grid" 
 				data-on-interval__duration.500ms="$bladder=Math.min(100, Math.max(0, $bladder+$bladderRate)); $fun=Math.min(100, Math.max(0, $fun+$funRate)); $hunger=Math.min(100, Math.max(0, $hunger+$hungerRate)); $social=Math.min(100, Math.max(0, $social+$socialRate)); $energy=Math.min(100, Math.max(0, $energy+$energyRate)); $hygeine=Math.min(100, Math.max(0, $hygeine+$hygeineRate))"
-				data-on-load={ fmt.Sprintf("@get('/%s/connect')", roomID) }
 
 			>
 				for _, need := range []struct{name, icon string; value int}{
