@@ -1,0 +1,75 @@
+package templates
+
+import "fmt"
+
+type SimData struct {
+	Bladder int
+	Fun     int
+	Hunger  int
+	Social  int
+	Energy  int
+	Hygeine int
+}
+
+templ IndexPage(roomID string, data SimData) {
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+	<link href="styles.css" rel="stylesheet"/>
+	<div class="panel" data-signals={ fmt.Sprintf("{bladder: %d, fun: %d, hunger: %d, social: %d, energy: %d, hygeine: %d}", data.Bladder, data.Fun, data.Hunger, data.Social, data.Energy, data.Hygeine) } 
+		data-on-load={ fmt.Sprintf("@get('/%s/connect')", roomID) }>
+		<div class="status" data-value={ fmt.Sprintf("%d", data.Bladder) } data-class-good="$bladder>60" data-class-warn="$bladder>30" data-class-bad="$bladder<=30">
+			<div class="label">Bladder</div>
+			<div class="bar-container">
+				<div class="icon"><i class="fa-solid fa-toilet"></i></div>
+				<div class="bar">
+					<div class="fill" data-style-width="`${$bladder}%`"></div>
+				</div>
+			</div>
+		</div>
+		<div class="status" data-value={ fmt.Sprintf("%d", data.Fun) } data-class-good="$fun>60" data-class-warn="$fun>30" data-class-bad="$fun<=30">
+			<div class="label">Fun</div>
+			<div class="bar-container">
+				<div class="icon"><i class="fa-solid fa-face-smile"></i></div>
+				<div class="bar">
+					<div class="fill" data-style-width="`${$fun}%`"></div>
+				</div>
+			</div>
+		</div>
+		<div class="status" data-value={ fmt.Sprintf("%d", data.Hunger) } data-class-good="$hunger>60" data-class-warn="$hunger>30" data-class-bad="$hunger<=30">
+			<div class="label">Hunger</div>
+			<div class="bar-container">
+				<div class="icon"><i class="fa-solid fa-utensils"></i></div>
+				<div class="bar">
+					<div class="fill" data-style-width="`${$hunger}%`"></div>
+				</div>
+			</div>
+		</div>
+		<div class="status" data-value={ fmt.Sprintf("%d", data.Social) } data-class-good="$social>60" data-class-warn="$social>30" data-class-bad="$social<=30">
+			<div class="label">Social</div>
+			<div class="bar-container">
+				<div class="icon"><i class="fa-solid fa-users"></i></div>
+				<div class="bar">
+					<div class="fill" data-style-width="`${$social}%`"></div>
+				</div>
+			</div>
+		</div>
+		<div class="status" data-value={ fmt.Sprintf("%d", data.Energy) } data-class-good="$energy>60" data-class-warn="$energy>30" data-class-bad="$energy<=30">
+			<div class="label">Energy</div>
+			<div class="bar-container">
+				<div class="icon"><i class="fa-solid fa-bolt"></i></div>
+				<div class="bar">
+					<div class="fill" data-style-width="`${$energy}%`"></div>
+				</div>
+			</div>
+		</div>
+		<div class="status" data-value={ fmt.Sprintf("%d", data.Hygeine) } data-class-good="$hygeine>60" data-class-warn="$hygeine>30" data-class-bad="$hygeine<=30">
+			<div class="label">Hygeine</div>
+			<div class="bar-container">
+				<div class="icon"><i class="fa-solid fa-shower"></i></div>
+				<div class="bar">
+					<div class="fill" data-style-width="`${$hygeine}%`"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@1.0.0-RC.5/bundles/datastar.js"></script>
+}
