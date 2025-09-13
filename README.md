@@ -29,28 +29,10 @@ A simple Echo v4 web server that serves a Halloween-themed Sims-like needs manag
    - You'll be automatically redirected to a unique session URL
    - Add `/control` to the URL to access the control panel
 
-## Project Structure
-
-```
-halloween-sims/
-├── main.go          # Echo web server
-├── go.mod           # Go module dependencies
-├── index.html       # Main needs display interface
-├── control.html     # Control panel interface
-├── styles.css       # Styling for the interface
-└── README.md        # This file
-```
 
 ## API Endpoints
 
 - `GET /` - Creates a new session and redirects to `/[uuid]`
 - `GET /[uuid]` - Serves the main interface
 - `GET /[uuid]/control` - Serves the control panel
-- `GET /styles.css` - Serves the CSS file
 
-## Next Steps
-
-- Add persistence for session data
-- Implement proper session management with cookies
-- Add database storage for user sessions
-- Enhance the needs simulation logic
