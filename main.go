@@ -157,6 +157,19 @@ func main() {
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 
+	// Add timeout middleware for better connection handling
+	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
+		Timeout: 0, // No timeout for SSE connections
+	}))
+
+	// Health check endpoint
+	e.GET("/health", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"status":    "healthy",
+			"timestamp": time.Now().Unix(),
+		})
+	})
+
 	// Serve CSS files
 	e.GET("/styles.css", func(c echo.Context) error {
 		return serveCSS(c, "styles.css")
@@ -193,21 +206,37 @@ func main() {
 		return templates.IndexPage(roomID, simData).Render(c.Request().Context(), c.Response().Writer)
 	})
 	e.GET("/:roomID/connect", func(c echo.Context) error {
-		log.Println("client connected")
-		// For now, we'll allow access to any room ID
-		// In the future, you might want to validate that the room exists
-		// but for read-only access, we don't need session validation
+		roomID := c.Param("roomID")
+		log.Printf("Client connected to room: %s", roomID)
+
+		// Set SSE headers for better connection stability
+		c.Response().Header().Set("Content-Type", "text/event-stream")
+		c.Response().Header().Set("Cache-Control", "no-cache")
+		c.Response().Header().Set("Connection", "keep-alive")
+		c.Response().Header().Set("Access-Control-Allow-Origin", "*")
+		c.Response().Header().Set("Access-Control-Allow-Headers", "Cache-Control")
 
 		sse := datastar.NewSSE(c.Response().Writer, c.Request())
 
-		sub, err := nc.Subscribe("sim."+c.Param("roomID"), func(m *nats.Msg) {
+		// Create a channel to handle graceful shutdown
+		done := make(chan struct{})
+
+		sub, err := nc.Subscribe("sim."+roomID, func(m *nats.Msg) {
 			// Check if the context is still valid before trying to patch signals
 			select {
 			case <-c.Request().Context().Done():
-				return // Context is cancelled, don't try to send data
+				log.Printf("Context cancelled for room %s, stopping message processing", roomID)
+				return
+			case <-done:
+				log.Printf("Connection closed for room %s, stopping message processing", roomID)
+				return
 			default:
 				// Context is still valid, proceed with patching signals
-				sse.PatchSignals(m.Data)
+				if err := sse.PatchSignals(m.Data); err != nil {
+					log.Printf("Failed to patch signals for room %s: %v", roomID, err)
+					close(done)
+					return
+				}
 				// Only flush if the response writer is still valid
 				if c.Response().Writer != nil {
 					c.Response().Flush()
@@ -215,11 +244,15 @@ func main() {
 			}
 		})
 		if err != nil {
-			log.Printf("Failed to subscribe to NATS: %v", err)
+			log.Printf("Failed to subscribe to NATS for room %s: %v", roomID, err)
 			return c.String(http.StatusInternalServerError, "Failed to connect")
 		}
-		defer sub.Unsubscribe()
+		defer func() {
+			log.Printf("Unsubscribing from room %s", roomID)
+			sub.Unsubscribe()
+		}()
 
+		// Send initial signals
 		initialSignals := map[string]any{
 			"bladder": 95,
 			"fun":     95,
@@ -229,12 +262,53 @@ func main() {
 			"hygeine": 90,
 		}
 		signalsJSON, _ := json.Marshal(initialSignals)
-		sse.PatchSignals(signalsJSON)
+		if err := sse.PatchSignals(signalsJSON); err != nil {
+			log.Printf("Failed to send initial signals for room %s: %v", roomID, err)
+			return err
+		}
 
 		c.Response().Flush()
 
+		// Start heartbeat ticker
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+
+		go func() {
+			for {
+				select {
+				case <-ticker.C:
+					// Send heartbeat to keep connection alive
+					select {
+					case <-c.Request().Context().Done():
+						return
+					case <-done:
+						return
+					default:
+						heartbeat := map[string]any{"heartbeat": time.Now().Unix()}
+						heartbeatJSON, _ := json.Marshal(heartbeat)
+						if err := sse.PatchSignals(heartbeatJSON); err != nil {
+							log.Printf("Failed to send heartbeat for room %s: %v", roomID, err)
+							close(done)
+							return
+						}
+						if c.Response().Writer != nil {
+							c.Response().Flush()
+						}
+					}
+				case <-done:
+					return
+				}
+			}
+		}()
+
 		// Wait for the connection to close
-		<-c.Request().Context().Done()
+		select {
+		case <-c.Request().Context().Done():
+			log.Printf("Client disconnected from room %s (context cancelled)", roomID)
+		case <-done:
+			log.Printf("Client disconnected from room %s (connection closed)", roomID)
+		}
+
 		return nil
 	})
 
